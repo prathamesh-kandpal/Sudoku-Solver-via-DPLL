@@ -1,6 +1,6 @@
 def parse_input(file_name):
     try:
-        with open(file_name, 'r') as file:
+        with open(file_name, 'sudoku_input.txt') as file:
             lines = file.readlines()
             sudoku_board = []
             for line in lines:
