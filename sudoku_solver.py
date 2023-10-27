@@ -12,8 +12,13 @@ def parse_input(file_name):
         return None
 
 def sudoku_constraints(board):
+    # Create CNF clauses to represent the Sudoku puzzle
     clauses = []
     n = 9  # Sudoku grid size
+
+    # Helper function to convert Sudoku coordinates to literal numbers
+    def literal(row, col, num):
+        return (row * 81) + (col * 9) + (num - 1) + 1
 
     # Ensure that each cell contains a number from 1 to 9
     for row in range(n):
@@ -44,52 +49,45 @@ def sudoku_constraints(board):
 
     return clauses
 
-def literal(row, col, num):
-    return (row * 81) + (col * 9) + (num - 1) + 1
+def dpll(clauses, assignments=[]):
+    # DPLL algorithm to solve CNF clauses
+    if all(len(clause) == 0 for clause in clauses):
+        return []  # All clauses are satisfied
 
-def dpll(clauses):
-    # Implement DPLL solver here
-    # Return assignments
-
-    def is_empty(clauses):
-        return all(len(clause) == 0 for clause in clauses)
-
-    def is_empty_clause(clauses):
-        return any(len(clause) == 0 for clause in clauses)
-
-    if is_empty_clause(clauses):
+    if any(len(clause) == 0 for clause in clauses):
         return None  # Backtrack, this branch is not valid
-
-    if is_empty(clauses):
-        return []  # All clauses are satisfied, return an empty assignment
 
     # Unit propagation: Find and assign unit clauses
     unit_clauses = [clause[0] for clause in clauses if len(clause) == 1]
     new_clauses = [clause for clause in clauses if len(clause) != 1]
-    assignments = []
-    for literal in unit_clauses:
-        assignments.append(literal)
-        new_clauses = [[l for l in clause if l != -literal] for clause in new_clauses]
 
-    # Pure literal elimination: Find and assign pure literals
+    # Recursive solving
+    for literal in unit_clauses:
+        new_assignments = assignments + [literal]
+        result = dpll([[l for l in clause if l != -literal] for clause in new_clauses], new_assignments)
+        if result is not None:
+            return result
+
+    # If no unit clauses left, try pure literal elimination
     literals = [literal for clause in new_clauses for literal in clause]
     pure_literals = [literal for literal in literals if -literal not in literals]
-    for literal in pure_literals:
-        assignments.append(literal)
-        new_clauses = [[l for l in clause if l != literal] for clause in new_clauses]
+    if pure_literals:
+        literal = pure_literals[0]
+        new_assignments = assignments + [literal]
+        return dpll([[l for l in clause if l != -literal] for clause in new_clauses], new_assignments)
 
-    # Recursively solve with updated clauses
-    result = dpll(new_clauses)
+    # If no pure literals, make an arbitrary choice
+    literal = new_clauses[0][0]
+    new_assignments = assignments + [literal]
+    result = dpll([[l for l in clause if l != -literal] for clause in new_clauses], new_assignments)
+    if result is not None:
+        return result
 
-    if result is None:
-        return None  # Backtrack
-    else:
-        return assignments + result
+    # If no choice leads to a solution, backtrack
+    return None
 
 def convert_back(assignments):
-    # Implement conversion back to Sudoku board
-    # Return the Sudoku board
-
+    # Convert DPLL assignments back to a Sudoku board
     n = 9  # Sudoku grid size
     board = [[0] * n for _ in range(n)]
 
